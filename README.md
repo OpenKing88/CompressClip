@@ -96,14 +96,27 @@ implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:${Version.corou
 - 如果这些没有符合你的需求，你可以自定义 StorageConfiguration，只需实现接口并将其传递给库即可
 - 
 ```kotlin
-class FullyCustomizedStorageConfiguration(
+ class AppCacheStorageConfiguration(
 ) : StorageConfiguration {
+    val compressDir = PathUtils.getInternalAppCachePath() + File.separator + "compress"
     override fun createFileToSave(
         context: Context,
         videoFile: File,
         fileName: String,
         shouldSave: Boolean
-    ): File = ....
+    ): File {
+        FileUtils.createOrExistsDir(compressDir)
+        val outputName = "compressVideo.mp4"
+        val out = compressDir + File.separator + outputName
+        if (shouldSave) {
+            FileUtils.getFileByPath(out).let {
+                FileUtils.copy(videoFile, it)
+                return it
+            }
+        }
+        return File.createTempFile(videoFile.nameWithoutExtension, videoFile.extension)
+    }
+
 }
 
 ```
@@ -127,6 +140,8 @@ VideoCompressor.start(
       isMinBitrateCheckEnabled = true,
       videoBitrateInMbps = 5, 
       disableAudio = false,
+      startTime = 0,//开始时间 s
+      endTime = 120,//结束时间 s
       resizer = VideoResizer.matchSize(360, 480)
    ),
    listener = object : CompressionListener {
