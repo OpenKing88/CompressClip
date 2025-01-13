@@ -6,10 +6,14 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import com.openking.compressclip.CompressionProgressListener
+import com.openking.compressclip.VideoQuality
 import com.openking.compressclip.config.Configuration
+import com.openking.compressclip.utils.CompressorUtils
+import com.openking.compressclip.utils.CompressorUtils.calculateCompressedVideoSize
 import com.openking.compressclip.utils.CompressorUtils.createEncoderOutputFileParameters
 import com.openking.compressclip.utils.CompressorUtils.findTrack
 import com.openking.compressclip.utils.CompressorUtils.getBitrate
+import com.openking.compressclip.utils.CompressorUtils.getLowerLevelQuality
 import com.openking.compressclip.utils.CompressorUtils.prepareVideoHeight
 import com.openking.compressclip.utils.CompressorUtils.prepareVideoWidth
 import com.openking.compressclip.utils.CompressorUtils.printException
@@ -78,7 +82,7 @@ object Compressor {
             )
         }
         val startTime = (configuration.startTime ?: 0) * 1000 * 1000L
-        val endTime = if (configuration.endTime != null) {
+        val endTime = if (configuration.endTime != null && (configuration.endTime ?: 0) > startTime) {
             configuration.endTime!! * 1000 * 1000L
         } else {
             durationData.toLong() * 1000
@@ -112,15 +116,24 @@ object Compressor {
             return@withContext Result(index, success = false, failureMessage = INVALID_BITRATE)
 
         //处理新的比特率值
-        val newBitrate: Int =
+        //处理新的比特率值
+        var newBitrate: Int =
             if (configuration.videoBitrateInMbps == null) getBitrate(bitrate, configuration.quality)
             else configuration.videoBitrateInMbps!! * 1000000
+        configuration.maxSize?.let {
+            newBitrate =
+                calculateBitrate(newBitrate, duration, it, configuration.quality)
+        }
 
         //处理新的宽度和高度值
         val resizer = configuration.resizer
         val target = resizer?.resize(width, height) ?: Pair(width, height)
         var newWidth = roundDimension(target.first)
         var newHeight = roundDimension(target.second)
+        Log.d(
+            "openking",
+            "sourceVideo size width:$width  height:$height   scaleSize newWidth:$newWidth  newHeight:$newHeight  bitrate: $bitrate newBitrate: $newBitrate"
+        )
 
         //处理旋转值，并在需要时交换宽度和高度
         rotation = when (rotation) {
@@ -149,6 +162,39 @@ object Compressor {
             startTime,
             endTime
         )
+    }
+
+    private fun calculateBitrate(
+        bitrate: Int,
+        duration: Long,
+        maxSize: Int,
+        quality: VideoQuality,
+    ): Int {
+        var newBitrate = bitrate
+        if (quality == VideoQuality.VERY_LOW) {
+            //如果已经过是最低质量了则不再处理
+            return newBitrate
+        }
+        val predictVideSize = calculateCompressedVideoSize(
+            newBitrate,
+            (duration / 1000 / 1000).toInt()
+        )
+        Log.d(
+            "openking",
+            "quality:$quality bitrate：$bitrate bps predictVideSize:$predictVideSize Mb"
+        )
+        return if (predictVideSize > maxSize + 5) {
+            //如果预估压缩后的视频大小大于maxSize，那么降低bitrate重新计算
+            val newQuality = getLowerLevelQuality(quality)
+            newBitrate = getBitrate(bitrate, newQuality)
+            Log.d(
+                "openking",
+                "newQuality:$newQuality newBitrate：$newBitrate bps  duration:${(duration / 1000 / 1000).toInt()}s"
+            )
+            calculateBitrate(newBitrate, duration, maxSize, newQuality)
+        } else {
+            newBitrate
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -491,23 +537,6 @@ object Compressor {
                 }
             }
             extractor.unselectTrack(audioIndex)
-        }
-    }
-
-    private fun prepareEncoder(hasQTI: Boolean): MediaCodec {
-
-        // This seems to cause an issue with certain phones
-        // val encoderName = MediaCodecList(REGULAR_CODECS).findEncoderForFormat(outputFormat)
-        // val encoder: MediaCodec = MediaCodec.createByCodecName(encoderName)
-        // Log.i("encoderName", encoder.name)
-        // c2.qti.avc.encoder results in a corrupted .mp4 video that does not play in
-        // Mac and iphones
-        return if (hasQTI) {
-            Log.d("openking","prepare use hardware - c2.android.avc.encoder")
-            MediaCodec.createByCodecName("c2.android.avc.encoder")
-        } else {
-            Log.d("openking","prepare use default encoder ")
-            MediaCodec.createEncoderByType(MIME_TYPE)
         }
     }
 

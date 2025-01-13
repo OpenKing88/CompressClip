@@ -133,15 +133,15 @@ object CompressorUtils {
                     setInteger(MediaFormat.KEY_COLOR_RANGE, it)
                 }
             }
-            val codec=if (hasQTI()) {
-                Log.d("openking","prepare use hardware - c2.android.avc.encoder")
+            val codec = if (hasQTI()) {
+                Log.d("openking", "prepare use hardware - c2.android.avc.encoder")
                 MediaCodec.createByCodecName("c2.android.avc.encoder")
             } else {
-                Log.d("openking","prepare use default encoder ")
+                Log.d("openking", "prepare use default encoder ")
                 MediaCodec.createEncoderByType(MIME_TYPE)
             }
             return try {
-                trySetProfileAndLevel(codec,outputFormat)
+                trySetProfileAndLevel(codec, outputFormat)
                 Log.i(
                     "openking",
                     "videoFormat: $this"
@@ -152,7 +152,7 @@ object CompressorUtils {
             } catch (e: Exception) {
                 Log.d("openking", "configure failed try switch to default encoder ")
                 val encoder = MediaCodec.createEncoderByType(MIME_TYPE)
-                trySetProfileAndLevel(encoder,outputFormat)
+                trySetProfileAndLevel(encoder, outputFormat)
                 Log.i(
                     "openking",
                     "videoFormat: $this"
@@ -161,6 +161,10 @@ object CompressorUtils {
                 encoder
             }
         }
+    }
+
+    fun calculateCompressedVideoSize(bitrate: Int, durationSeconds: Int): Int {
+        return ((bitrate * durationSeconds) / (8.0 * 1024 * 1024)).roundToInt()
     }
 
     private fun getFrameRate(format: MediaFormat): Int {
@@ -246,6 +250,19 @@ object CompressorUtils {
     }
 
     /**
+     * 根据当前的quality获取比当前低一级的quality
+     */
+    fun getLowerLevelQuality(quality: VideoQuality): VideoQuality {
+        return when (quality) {
+            VideoQuality.VERY_LOW -> quality
+            VideoQuality.LOW -> VideoQuality.VERY_LOW
+            VideoQuality.MEDIUM -> VideoQuality.LOW
+            VideoQuality.HIGH -> VideoQuality.MEDIUM
+            VideoQuality.VERY_HIGH -> VideoQuality.HIGH
+        }
+    }
+
+    /**
      * Generate new width and height for source file
      * @param width file's original width
      * @param height file's original height
@@ -295,69 +312,3 @@ object CompressorUtils {
         return MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
     }
 }
-
-/*
-            if (codec.name == "c2.qti.avc.encoder") {
-                val capabilities = codec.getCapabilitiesForType("video/avc")
-
-
-                for (c in capabilities.colorFormats) {
-                    Log.wtf("color format", c.toString())
-                }
-
-                for (c in capabilities.profileLevels) {
-                    Log.wtf(" level", c.level.toString())
-                    Log.wtf("profile ", c.profile.toString())
-                }
-
-                Log.wtf(
-                    "complexity range",
-                    capabilities.encoderCapabilities.complexityRange.upper.toString()
-                )
-
-                Log.wtf(
-                    "quality range", " ${ capabilities.encoderCapabilities.qualityRange}"
-                )
-
-                Log.wtf(
-                    "frame rates range", " ${ capabilities.videoCapabilities.supportedFrameRates}"
-                )
-
-                Log.wtf(
-                    "bitrate rates range", " ${ capabilities.videoCapabilities.bitrateRange}"
-                )
-
-                Log.wtf(
-                    "mode supported", " ${ capabilities.encoderCapabilities.isBitrateModeSupported(1)}"
-                )
-
-                Log.wtf(
-                    "height alignment", " ${ capabilities.videoCapabilities.heightAlignment}"
-                )
-
-                Log.wtf(
-                    "supported heights", " ${ capabilities.videoCapabilities.supportedHeights}"
-                )
-
-                Log.wtf(
-                    "supported points", " ${ capabilities.videoCapabilities.supportedPerformancePoints}"
-                )
-
-                Log.wtf(
-                    "supported width", " ${ capabilities.videoCapabilities.supportedWidths}"
-                )
-
-                Log.wtf(
-                    "width alignment", " ${ capabilities.videoCapabilities.widthAlignment}"
-                )
-
-                Log.wtf(
-                    "default format", " ${ capabilities.defaultFormat}"
-                )
-
-                Log.wtf(
-                    "mime", " ${ capabilities.mimeType}"
-                )
-
-            }
- */

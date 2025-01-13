@@ -10,65 +10,16 @@ import java.io.FileInputStream
 import java.io.IOException
 
 data class Configuration(
-    var quality: VideoQuality = VideoQuality.MEDIUM,
+    var quality: VideoQuality = VideoQuality.VERY_HIGH,
     var isMinBitrateCheckEnabled: Boolean = true,
     var videoBitrateInMbps: Int? = null,
     var disableAudio: Boolean = false,
     val resizer: VideoResizer? = VideoResizer.auto,
     var startTime: Int? = null,
     var endTime: Int? = null,
-    var videoNames: List<String>
-) {
-    @Deprecated(
-        "Use VideoResizer to override the output video dimensions.",
-        ReplaceWith("Configuration(quality, isMinBitrateCheckEnabled, videoBitrateInMbps, disableAudio, resizer = if (keepOriginalResolution) null else VideoResizer.auto, videoNames)")
-    )
-    constructor(
-        quality: VideoQuality = VideoQuality.MEDIUM,
-        isMinBitrateCheckEnabled: Boolean = true,
-        videoBitrateInMbps: Int? = null,
-        disableAudio: Boolean = false,
-        startTime: Int? = null,
-        endTime: Int? = null,
-        keepOriginalResolution: Boolean,
-        videoNames: List<String>
-    ) : this(
-        quality,
-        isMinBitrateCheckEnabled,
-        videoBitrateInMbps,
-        disableAudio,
-        getVideoResizer(keepOriginalResolution, null, null),
-        startTime,
-        endTime,
-        videoNames
-    )
-
-    @Deprecated(
-        "Use VideoResizer to override the output video dimensions.",
-        ReplaceWith("Configuration(quality, isMinBitrateCheckEnabled, videoBitrateInMbps, disableAudio, resizer = VideoResizer.matchSize(videoWidth, videoHeight), videoNames)")
-    )
-    constructor(
-        quality: VideoQuality = VideoQuality.MEDIUM,
-        isMinBitrateCheckEnabled: Boolean = true,
-        videoBitrateInMbps: Int? = null,
-        disableAudio: Boolean = false,
-        keepOriginalResolution: Boolean = false,
-        startTime: Int? = null,
-        endTime: Int? = null,
-        videoHeight: Double? = null,
-        videoWidth: Double? = null,
-        videoNames: List<String>
-    ) : this(
-        quality,
-        isMinBitrateCheckEnabled,
-        videoBitrateInMbps,
-        disableAudio,
-        getVideoResizer(keepOriginalResolution, videoHeight, videoWidth),
-        startTime,
-        endTime,
-        videoNames
-    )
-}
+    var maxSize: Int? = null,//压缩后视频最大值 单位MB 如果计算压缩后视频大小超过该值那么会自动降低quality来适应maxSize
+    var videoNames: List<String>? = null
+)
 
 private fun getVideoResizer(
     keepOriginalResolution: Boolean,

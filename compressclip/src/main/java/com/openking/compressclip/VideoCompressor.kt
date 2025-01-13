@@ -21,41 +21,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
 
     private var job: Job? = null
 
-    /**
-     * This function compresses a given list of [uris] of video files and writes the compressed
-     * video file at [SharedStorageConfiguration.saveAt] directory, or at [AppSpecificStorageConfiguration.subFolderName]
-     *
-     * The source videos should be provided content uris.
-     *
-     * Only [sharedStorageConfiguration] or [appSpecificStorageConfiguration] must be specified at a
-     * time. Passing both will throw an Exception.
-     *
-     * @param [context] the application context.
-     * @param [uris] the list of content Uris of the video files.
-     * @param [isStreamable] determines if the output video should be prepared for streaming.
-     * @param [sharedStorageConfiguration] configuration for the path directory where the compressed
-     * videos will be saved, and the name of the file
-     * @param [appSpecificStorageConfiguration] configuration for the path directory where the compressed
-     * videos will be saved, the name of the file, and any sub-folders name. The library won't create the subfolder
-     * and will throw an exception if the subfolder does not exist.
-     * @param [listener] a compression listener that listens to compression [CompressionListener.onStart],
-     * [CompressionListener.onProgress], [CompressionListener.onFailure], [CompressionListener.onSuccess]
-     * and if the compression was [CompressionListener.onCancelled]
-     * @param [configureWith] to allow add video compression configuration that could be:
-     * [Configuration.quality] to allow choosing a video quality that can be [VideoQuality.LOW],
-     * [VideoQuality.MEDIUM], [VideoQuality.HIGH], and [VideoQuality.VERY_HIGH].
-     * This defaults to [VideoQuality.MEDIUM]
-     * [Configuration.isMinBitrateCheckEnabled] to determine if the checking for a minimum bitrate threshold
-     * before compression is enabled or not. This default to `true`
-     * [Configuration.videoBitrateInMbps] which is a custom bitrate for the video. You might consider setting
-     * [Configuration.isMinBitrateCheckEnabled] to `false` if your bitrate is less than 2000000.
-     *  * [Configuration.keepOriginalResolution] to keep the original video height and width when compressing.
-     * This defaults to `false`
-     * [Configuration.videoHeight] which is a custom height for the video. Must be specified with [Configuration.videoWidth]
-     * [Configuration.videoWidth] which is a custom width for the video. Must be specified with [Configuration.videoHeight]
-     */
     @JvmStatic
-    @JvmOverloads
     fun start(
         context: Context,
         uris: List<Uri>,
@@ -64,8 +30,12 @@ object VideoCompressor : CoroutineScope by MainScope() {
         configureWith: Configuration,
         listener: CompressionListener,
     ) {
+
+        if (configureWith.videoNames.isNullOrEmpty()) {
+            configureWith.videoNames = (uris.map { uri -> uri.pathSegments.last() })
+        }
         // Only one is allowed
-        assert(configureWith.videoNames.size == uris.size)
+        assert(configureWith.videoNames!!.size == uris.size)
 
         doVideoCompression(
             context,
@@ -112,7 +82,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
                     path,
                     storageConfiguration,
                     isStreamable,
-                    configuration.videoNames[i],
+                    configuration.videoNames!![i],
                     shouldSave = false
                 )
 
@@ -122,7 +92,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
                         path,
                         storageConfiguration,
                         null,
-                        configuration.videoNames[i],
+                        configuration.videoNames!![i],
                         shouldSave = false
                     )
 
@@ -146,7 +116,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
                             result.path,
                             storageConfiguration,
                             isStreamable,
-                            configuration.videoNames[i],
+                            configuration.videoNames!![i],
                             shouldSave = true
                         )
 
@@ -247,7 +217,7 @@ object VideoCompressor : CoroutineScope by MainScope() {
         }
     }
 
-    private fun validatedFileName(name: String, isStreamable: Boolean?): String {
+    private fun validatedFileName(name: String, isStreamable: Boolean? = null): String {
         val videoName = if (isStreamable == null || !isStreamable) name
         else "${name}_temp"
 
