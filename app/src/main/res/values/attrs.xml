@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="CircleProgressBar">
+        <!-- 边框宽度 -->
+        <attr name="borderWidth" format="dimension" />
+        <!-- 默认颜色 -->
+        <attr name="defaultColor" format="color" />
+        <!-- 进度颜色 -->
+        <attr name="progressColor" format="color" />
+        <!-- 文本颜色 -->
+        <attr name="textColor" format="color" />
+        <!-- 是否启用圆角 -->
+        <attr name="roundedProgress" format="boolean" />
+
+    </declare-styleable>
+</resources>

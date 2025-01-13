@@ -182,7 +182,8 @@ class MainActivity : AppCompatActivity() {
             shouldSave: Boolean
         ): File {
             FileUtils.createOrExistsDir(compressDir)
-            val outputName = "compressVideo.mp4"
+            val timeStr = TimeUtils.getNowString(TimeUtils.getSafeDateFormat("yyyy-MM-dd_HH:mm:ss"))
+            val outputName = "${timeStr}_compressVideo.mp4"
             val out = compressDir + File.separator + outputName
             if (shouldSave) {
                 FileUtils.getFileByPath(out).let {
@@ -209,18 +210,20 @@ class MainActivity : AppCompatActivity() {
                 isStreamable = false,
                 storageConfiguration = AppCacheStorageConfiguration(),
                 configureWith = Configuration(
-                    quality = VideoQuality.MEDIUM,
+                    quality = VideoQuality.VERY_HIGH,
                     videoNames = uris.map { uri -> uri.pathSegments.last() },
                     isMinBitrateCheckEnabled = false,
                     startTime = 0,
-                    endTime = 120,
-                    resizer = VideoResizer.auto
+                    endTime = 300,
+                    resizer = VideoResizer.auto,
+                    maxSize = 100//压缩后视频最大100MB
                 ),
                 listener = object : CompressionListener {
                     override fun onProgress(index: Int, percent: Float) {
                         //Update UI
                         if (percent <= 100)
                             runOnUiThread {
+                                binding.progress.setProgress(percent)
                                 data[index] = VideoDetailsModel(
                                     "",
                                     uris[index],
@@ -254,17 +257,9 @@ class MainActivity : AppCompatActivity() {
                             100F
                         )
                         runOnUiThread {
+                            binding.progress.setProgress(100f)
                             adapter.notifyDataSetChanged()
                         }
-                    }
-
-                    override fun onFailure(index: Int, failureMessage: String) {
-                        Log.wtf("failureMessage", failureMessage)
-                    }
-
-                    override fun onCancelled(index: Int) {
-                        Log.wtf("TAG", "compression has been cancelled")
-                        // make UI changes, cleanup, etc
                     }
                 },
             )
